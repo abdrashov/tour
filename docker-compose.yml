@@ -1,0 +1,65 @@
+version: "3.8"
+
+networks:
+  backend:
+    driver: bridge
+
+services:
+  app-backend:
+    build:
+      context: ./backend
+      dockerfile: .${APP_ENV}.Dockerfile
+    ports:
+      - "9000"
+    volumes:
+      - ./backend/src:/var/www/backend
+    networks:
+      - backend
+
+  nginx:
+    build:
+      context: ./nginx
+      dockerfile: .${APP_ENV}.Dockerfile
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./backend/src:/var/www/backend
+      - ./logs/nginx:/var/log/nginx
+    networks:
+      - backend
+
+  mariadb:
+    build:
+      context: ./mariadb
+      dockerfile: .${APP_ENV}.Dockerfile
+    ports:
+      - "3306"
+    environment:
+      - MYSQL_ROOT_PASSWORD=${DB_ROOT_PASSWORD}
+      - MYSQL_DATABASE=${DB_DATABASE}
+      - MYSQL_USER=${DB_USER}
+      - MYSQL_PASSWORD=${DB_PASSWORD}
+    volumes:
+      - ~/.edu-docker/mysql:/var/lib/mysql
+      - ./logs/mysql:/var/log/mysql
+    networks:
+      - backend
+
+  phpmyadmin:
+    build:
+      context: ./phpmyadmin
+      dockerfile: .${APP_ENV}.Dockerfile
+    ports:
+      - "8081:80"
+    environment:
+      - PMA_ARBITRARY=0
+      - PMA_HOST=mariadb
+      - MYSQL_ROOT_PASSWORD=${DB_ROOT_PASSWORD}
+      - MYSQL_USER=${DB_USER}
+      - MYSQL_PASSWORD=${DB_PASSWORD}
+    depends_on:
+      - mariadb
+    networks:
+      - backend
+
